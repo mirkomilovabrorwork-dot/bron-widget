@@ -1,0 +1,100 @@
+<!doctype html><html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><script src="https://telegram.org/js/telegram-web-app.js"></script><style>body{margin:0}</style></head><body>
+<title>Meeting Room Bron</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: Telegram mini-app column - day strip on top, half-hour timeline, bottom sheet to book */
+:root{--bg:#f3f5f4;--card:#ffffff;--fg:#1c2421;--mut:#6d7a75;--line:#e2e7e4;--free:#e6f4ea;--freeH:#cfeadb;--own:#1f6fd1;--oth:#cf4a4a;--past:#eceeed;--now:#e03a3a;--acc:#1f6fd1;--today:#fff6d6;
+--f:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121615;--card:#1b2120;--fg:#e9eeec;--mut:#94a19c;--line:#2a3230;--free:#1d2f25;--freeH:#26422f;--own:#4b8fe6;--oth:#e06464;--past:#202625;--now:#ff5a5a;--acc:#4b8fe6;--today:#3a3420;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#121615;--card:#1b2120;--fg:#e9eeec;--mut:#94a19c;--line:#2a3230;--free:#1d2f25;--freeH:#26422f;--own:#4b8fe6;--oth:#e06464;--past:#202625;--now:#ff5a5a;--acc:#4b8fe6;--today:#3a3420;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f);font-size:15px}
+.app{max-width:460px;margin:0 auto;padding-block:12px 120px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+h1{font-size:20px;margin:0;font-weight:700}
+.tag{font-size:12px;color:var(--mut)}
+.days{display:flex;gap:6px;overflow-x:auto;margin:12px 0;padding-bottom:4px}
+.day{flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:12px;padding:8px 12px;text-align:center;cursor:pointer;font:inherit;min-width:64px}
+.day b{display:block;font-size:17px}
+.day small{color:var(--mut);font-size:12px}
+.day[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:#fff}
+.day[aria-pressed="true"] small{color:#fff}
+.day .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--oth);margin-left:3px;vertical-align:middle}
+.sum{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px;line-height:1.5}
+.sum .f{color:#2e8b4e}
+.tl{position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:6px 8px 6px 56px}
+.row{position:relative;height:34px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row span.t{position:absolute;left:-50px;top:-8px;font-size:12px;color:var(--mut);font-variant-numeric:tabular-nums}
+.slot{position:absolute;inset:3px 0;border-radius:8px;background:var(--free);border:0;width:100%;cursor:pointer;color:var(--mut);font:inherit;font-size:12px;text-align:left;padding-left:10px;opacity:1}
+.slot:hover,.slot:focus-visible{background:var(--freeH);outline:2px solid var(--acc);outline-offset:-2px}
+.slot.past{background:var(--past);cursor:default;color:transparent}
+.slot.sel{background:var(--acc);color:#fff}
+.blk{position:absolute;left:8px;right:8px;border-radius:10px;color:#fff;padding:6px 10px;font-weight:600;font-size:14px;display:flex;justify-content:space-between;align-items:center;z-index:2}
+.blk small{font-weight:500;opacity:.9}
+.now{position:absolute;left:48px;right:8px;height:2px;background:var(--now);z-index:3}
+.now::before{content:"hozir";position:absolute;right:0;top:-16px;font-size:11px;color:var(--now);font-weight:600}
+.legend{display:flex;gap:14px;font-size:13px;color:var(--mut);margin-top:10px;flex-wrap:wrap}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.sheet{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);border-radius:18px 18px 0 0;padding:16px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));box-shadow:0 -8px 24px rgba(0,0,0,.12);z-index:10}
+.sheet .in{max-width:460px;margin:0 auto;display:grid;gap:10px}
+.sheet h2{margin:0;font-size:17px}
+.durs{display:flex;gap:6px;flex-wrap:wrap}
+.durs button{flex:1;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:10px;padding:9px 0;font:inherit;cursor:pointer}
+.durs button[aria-pressed="true"]{border-color:var(--acc);color:var(--acc);font-weight:600}
+.durs button:disabled{opacity:.35;cursor:not-allowed}
+.go{background:var(--acc);color:#fff;border:0;border-radius:12px;padding:13px;font:inherit;font-weight:600;cursor:pointer}
+.cancel{background:none;border:0;color:var(--mut);font:inherit;cursor:pointer}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:20;font-weight:500}
+</style>
+
+<div class="app">
+  <header><h1>Meeting room</h1><span class="tag">namuna ma'lumot · prototip</span></header>
+  <div class="days" id="days"></div>
+  <div class="sum" id="sum"></div>
+  <div class="tl" id="tl"></div>
+  <div class="legend"><span><i style="background:var(--free)"></i>bo'sh — bosing</span><span><i style="background:var(--oth)"></i>band</span><span><i style="background:var(--own)"></i>sizning jamoangiz</span></div>
+</div>
+<div class="sheet" id="sheet" hidden><div class="in">
+  <h2 id="sh-t"></h2>
+  <div class="durs" id="durs"></div>
+  <button class="go" id="go">Bron qilish</button>
+  <button class="cancel" id="cx">Bekor</button>
+</div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const WD=["Ya","Du","Se","Cho","Pa","Ju","Sha"], H0=9, H1=20, NOW=13+40/60, TODAY=new Date(2026,10,25);
+const ME="Data365";
+const B=[{d:25,s:17.5,e:18,t:"Data365"},{d:26,s:11,e:12,t:"Basyra"},{d:27,s:9.5,e:10.5,t:"Basyra"},{d:27,s:14,e:15.5,t:"Data365"}];
+const days=[...Array(5)].map((_,i)=>{const x=new Date(TODAY);x.setDate(x.getDate()+i);return x});
+let cur=0, pick=null, dur=1;
+const hm=h=>String(Math.floor(h)).padStart(2,"0")+":"+String(Math.round(h%1*60)).padStart(2,"0");
+const $=id=>document.getElementById(id);
+const dayB=d=>B.filter(b=>b.d===d.getDate()).sort((a,b)=>a.s-b.s);
+const busy=(d,s,e)=>dayB(d).some(b=>s<b.e&&e>b.s);
+function free(d){const r=[];let t=cur===0?Math.ceil(NOW*2)/2:H0;for(const b of dayB(d)){if(b.s>t)r.push([t,b.s]);t=Math.max(t,b.e)}if(t<H1)r.push([t,H1]);return r}
+function drawDays(){$("days").innerHTML=days.map((d,i)=>`<button class="day" aria-pressed="${i===cur}" data-i="${i}"><small>${i===0?"Bugun":i===1?"Ertaga":WD[d.getDay()]}</small><b>${d.getDate()}${dayB(d).length?'<span class="dot"></span>':""}</b></button>`).join("");
+  document.querySelectorAll(".day").forEach(b=>b.onclick=()=>{cur=+b.dataset.i;pick=null;closeSheet();draw()})}
+function draw(){drawDays();const d=days[cur];
+  const bk=dayB(d), fr=free(d);
+  $("sum").innerHTML=(bk.length?bk.map(b=>`<div><b>${hm(b.s)}–${hm(b.e)}</b> ${b.t}${b.t===ME?" (siz)":" band"}</div>`).join(""):"<div>Hech kim band qilmagan</div>")+`<div class="f">Bo'sh: ${fr.length?fr.map(f=>hm(f[0])+"–"+hm(f[1])).join(", "):"yo'q"}</div>`;
+  let h="";for(let x=H0;x<H1;x+=.5){const past=cur===0&&x+.5<=NOW, sel=pick!==null&&x>=pick&&x<pick+dur;
+    h+=`<div class="row">${x%1===0?`<span class="t">${hm(x)}</span>`:""}<button class="slot${past?" past":""}${sel?" sel":""}" data-x="${x}" ${past?"disabled":""} aria-label="${hm(x)} bo'sh">${sel?"tanlandi":hm(x)}</button></div>`}
+  $("tl").innerHTML=h;
+  const rh=34, top=6;
+  for(const b of bk){const el=document.createElement("div");el.className="blk";el.style.top=(top+(b.s-H0)*2*rh+3)+"px";el.style.height=((b.e-b.s)*2*rh-6)+"px";el.style.left="56px";el.style.background=b.t===ME?"var(--own)":"var(--oth)";el.innerHTML=`<span>${b.t}</span><small>${hm(b.s)}–${hm(b.e)}</small>`;$("tl").appendChild(el)}
+  if(cur===0){const n=document.createElement("div");n.className="now";n.style.top=(top+(NOW-H0)*2*rh)+"px";$("tl").appendChild(n)}
+  document.querySelectorAll(".slot:not(.past)").forEach(s=>s.onclick=()=>{const x=+s.dataset.x;if(busy(d,x,x+.5))return;pick=x;dur=busy(d,x,x+1)||x+1>H1?.5:1;openSheet()})}
+function openSheet(){const d=days[cur];$("sheet").hidden=false;
+  $("durs").innerHTML=[[.5,"30 daq"],[1,"1 soat"],[1.5,"1,5 soat"],[2,"2 soat"]].map(([v,l])=>`<button aria-pressed="${v===dur}" data-v="${v}" ${busy(d,pick,pick+v)||pick+v>H1?"disabled":""}>${l}</button>`).join("");
+  document.querySelectorAll("#durs button").forEach(b=>b.onclick=()=>{dur=+b.dataset.v;openSheet()});
+  $("sh-t").textContent=`${cur===0?"Bugun":cur===1?"Ertaga":WD[d.getDay()]+" "+d.getDate()}, ${hm(pick)}–${hm(pick+dur)}`;draw();$("sheet").hidden=false}
+function closeSheet(){$("sheet").hidden=true}
+$("cx").onclick=()=>{pick=null;closeSheet();draw()};
+$("go").onclick=()=>{const d=days[cur];B.push({d:d.getDate(),s:pick,e:pick+dur,t:ME});const m=`Bron qilindi: ${hm(pick)}–${hm(pick+dur)}`;pick=null;closeSheet();draw();$("toast").textContent=m;$("toast").hidden=false;setTimeout(()=>$("toast").hidden=true,2200)};
+draw();
+</script>
+
+<script>try{Telegram.WebApp.ready();Telegram.WebApp.expand()}catch(e){}</script></body></html>
